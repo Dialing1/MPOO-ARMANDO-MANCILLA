@@ -1,0 +1,269 @@
+
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
+
+// ------------------------------------------------------------------
+// Clases compuestas 
+// ------------------------------------------------------------------
+
+class InfoPropietario {
+    private String nombre;
+    private String curp;
+
+    public InfoPropietario(String nombre, String curp) {
+        this.nombre = nombre;
+        this.curp = curp;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public String getCurp() {
+        return curp;
+    }
+
+    @Override
+    public String toString() {
+        return nombre + " (CURP: " + curp + ")";
+    }
+}
+
+class Bateria {
+    private String tipo;
+    private int Fabricante;
+    private double nivelPorcentaje; // 0.0 a 100.0
+
+    public Bateria(String tipo, int Fabricante, double nivelPorcentaje) {
+        this.tipo = tipo;
+        this.Fabricante = Fabricante;
+        this.nivelPorcentaje = Math.min(100.0, Math.max(0.0, nivelPorcentaje));
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public int getFabricante() {
+        return Fabricante;
+    }
+
+    public double getNivelPorcentaje() {
+        return nivelPorcentaje;
+    }
+
+    public void consumir(double cantidad) {
+        this.nivelPorcentaje = Math.max(0.0, this.nivelPorcentaje - cantidad);
+    }
+
+    public void recargar(double cantidad) {
+        this.nivelPorcentaje = Math.min(100.0, this.nivelPorcentaje + cantidad);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%.1f%% (%s, %d)", nivelPorcentaje, tipo, Fabricante);
+    }
+}
+
+// ------------------------------------------------------------------
+// Clase principal del Robot 
+// ------------------------------------------------------------------
+
+class Robot {
+    // Contador compartido por todas las instancias (Requerimiento 9)
+    private static int totalRobots = 0;
+
+    // Atributos de instancia
+    private final UUID id; // Identidad única por UUID (Requerimiento 3)
+    private String nombre;
+    private double velocidad;
+    private double distanciaRecorrida;
+    private int puntosDanioRecibidos;
+
+    // Composición (Requerimiento 4)
+    private InfoPropietario propietario;
+    private Bateria bateria;
+
+    // Constructor (Requerimiento 5 y 9)
+    public Robot(String nombre, InfoPropietario propietario, Bateria bateria) {
+        this.id = UUID.randomUUID(); // Asignación automática de UUID
+        this.nombre = nombre;
+        this.propietario = propietario;
+        this.bateria = bateria;
+        this.velocidad = 0.0;
+        this.distanciaRecorrida = 0.0;
+        this.puntosDanioRecibidos = 0;
+
+        // Incremento del contador compartido
+        Robot.totalRobots++;
+    }
+
+    // Método estático para consultar el total de robots creados
+    public static int getTotalRobots() {
+        return totalRobots;
+    }
+
+    // Getters
+    public UUID getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public double getVelocidad() {
+        return velocidad;
+    }
+
+    public double getDistanciaRecorrida() {
+        return distanciaRecorrida;
+    }
+
+    public int getPuntosDanioRecibidos() {
+        return puntosDanioRecibidos;
+    }
+
+    public InfoPropietario getPropietario() {
+        return propietario;
+    }
+
+    public Bateria getBateria() {
+        return bateria;
+    }
+
+    // --- Métodos de Comportamiento (Requerimiento 6) ---
+
+    // 1. Recibe parámetro y modifica estado
+    public void acelerar(double incrementoVelocidad) {
+        if (bateria.getNivelPorcentaje() > 5.0) {
+            this.velocidad += incrementoVelocidad;
+            this.bateria.consumir(incrementoVelocidad * 0.2);
+        } else {
+            this.velocidad = 0.0;
+        }
+    }
+
+    // 2. Recibe parámetro y modifica estado
+    public void desplazar(double tiempoSegundos) {
+        if (this.velocidad > 0 && bateria.getNivelPorcentaje() > 0) {
+            double avance = this.velocidad * tiempoSegundos;
+            this.distanciaRecorrida += avance;
+            this.bateria.consumir(avance * 0.1);
+        }
+    }
+
+    // 3. Recibe parámetro y modifica estado
+    public void recibirAtaque(int fuerzaImpacto) {
+        this.puntosDanioRecibidos += fuerzaImpacto;
+        this.bateria.consumir(fuerzaImpacto * 0.5);
+    }
+
+    // 4. Retorna un valor calculado
+    public double calcularPuntajeCombate() {
+        double factorBateria = bateria.getNivelPorcentaje() * 1.5;
+        double factorAvance = distanciaRecorrida * 2.0;
+        double penalizacionDanio = puntosDanioRecibidos * 3.0;
+
+        return Math.max(0.0, (factorBateria + factorAvance) - penalizacionDanio);
+    }
+
+    // Sobrescritura de datos
+
+    @Override
+    public String toString() {
+        return String.format(
+            "Robot [ID: %s | Nombre: %s | Propietario: %s | Batería: %s | Vel: %.1f m/s | Dist: %.1f m | Daño: %d pts]",
+            id, nombre, propietario.getNombre(), bateria, velocidad, distanciaRecorrida, puntosDanioRecibidos
+        );
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Robot robot = (Robot) obj;
+        return Objects.equals(id, robot.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// ------------------------------------------------------------------
+// Clase principal con main 
+// ------------------------------------------------------------------
+
+public class BattleBot {
+    public static void main(String[] args) {
+        Random random = new Random();
+
+        // 1. Creación de tres robots 
+        InfoPropietario p1 = new InfoPropietario("Ana Gómez", "GOMA900101MDF");
+        InfoPropietario p2 = new InfoPropietario("Carlos Ruíz", "RUCC880512HDF");
+        InfoPropietario p3 = new InfoPropietario("Lucía Torres", "TORL950320MDF");
+
+        Bateria b1 = new Bateria("Litio-Ion", 2025, 100.0);
+        Bateria b2 = new Bateria("Polímero de Litio", 2026, 95.0);
+        Bateria b3 = new Bateria("Grafeno", 2026, 90.0);
+
+        Robot robot1 = new Robot("Viper", p1, b1);
+        Robot robot2 = new Robot("Titan", p2, b2);
+        Robot robot3 = new Robot("Viper", p3, b3); // Se llama igual que robot1 para demostrar identidad por UUID
+
+        // 2. Conteo de robots registrados 
+        System.out.println("==================================================");
+        System.out.println("TOTAL DE ROBOTS PARTICIPANTES: " + Robot.getTotalRobots());
+        System.out.println("==================================================\n");
+
+        // 3. Estado antes de la batalla 
+        System.out.println("--- ESTADO INICIAL DE LOS ROBOTS ---");
+        System.out.println(robot1);
+        System.out.println(robot2);
+        System.out.println(robot3);
+        System.out.println();
+
+        // 4. Simulación de batalla usando valores aleatorios 
+        System.out.println("--- ¡INICIA LA BATALLA! ---");
+
+        // Acción Robot 1: velocidad aleatoria entre 2.0 y 10.0
+        double velAleatoria1 = 2.0 + random.nextDouble() * 8.0;
+        robot1.acelerar(velAleatoria1);
+        robot1.desplazar(random.nextInt(10) + 1);
+
+        // Acción Robot 2: velocidad aleatoria y daño recibido aleatorio (0 a 30)
+        double velAleatoria2 = 2.0 + random.nextDouble() * 8.0;
+        robot2.acelerar(velAleatoria2);
+        robot2.desplazar(random.nextInt(10) + 1);
+        int impactoAleatorio = random.nextInt(31);
+        robot2.recibirAtaque(impactoAleatorio);
+
+        // Acción Robot 3
+        robot3.acelerar(2.0);
+        robot3.recibirAtaque(random.nextInt(20));
+
+        // 5. Estado después de la batalla 
+        System.out.println("\n--- ESTADO FINAL DE LOS ROBOTS ---");
+        System.out.println(robot1 + " -> Puntaje: " + String.format("%.2f", robot1.calcularPuntajeCombate()));
+        System.out.println(robot2 + " -> Puntaje: " + String.format("%.2f", robot2.calcularPuntajeCombate()));
+        System.out.println(robot3 + " -> Puntaje: " + String.format("%.2f", robot3.calcularPuntajeCombate()));
+        System.out.println();
+
+        // 6. Experimentación con referencias e igualdad 
+        System.out.println("--- EXPERIMENTO DE REFERENCIAS E IGUALDAD ---");
+        Robot robotFavorito = robot1; // Nueva referencia al mismo objeto en memoria
+
+        System.out.println("¿robotFavorito es igual a robot1 (equals)? " + robotFavorito.equals(robot1));
+        System.out.println("¿robot1 es igual a robot3 aunque compartan el nombre 'Viper'? " + robot1.equals(robot3));
+
+        System.out.println("\nModificando velocidad a través de 'robotFavorito'...");
+        robotFavorito.acelerar(2.0);
+
+        System.out.println("Consultando la velocidad directamente desde 'robot1':");
+        System.out.println("Velocidad de robot1: " + robot1.getVelocidad() + " m/s");
+    }
+}
