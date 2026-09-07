@@ -1,0 +1,90 @@
+import java.io.*;
+import java.math.*;
+import java.security.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.*;
+
+class Result {
+
+    /*
+     * Complete the 'longestPeak' function below.
+     *
+     * The function is expected to return an INTEGER.
+     * The function accepts INTEGER_ARRAY array as parameter.
+     */
+
+    public static int longestPeak(int[] array) {
+        if (array == null || array.length < 3) {
+            return 0;
+        }
+
+        int n = array.length;
+        int maxLongitud = 0;
+
+        // Revisar los puntos para encontrar posibles picos
+        for (int i = 1; i < n - 1; i++) {
+            // Revisar si el elemento es candidato a un pico:
+            // 1. El incremento debe de aumentar por mas de una unidad
+            // 2. EL decenso debe de bajar (array[i] > array[i+1])
+            if (array[i] - array[i - 1] > 1 && array[i] > array[i + 1]) {
+
+                // Expandir a la izquierda
+                // Asegurar que cada ascenso incrementa > 1
+                int left = i - 1;
+                while (left > 0 && (array[left] - array[left - 1] > 1)) {
+                    left--;
+                }
+
+                // Expandir a la derecha
+                // Asegurar que cada reduccin siempre se baje
+                int right = i + 1;
+                while (right < n - 1 && (array[right] > array[right + 1])) {
+                    right++;
+                }
+
+                // Calcular el largo total (de izquierda a derecha)
+                int longitudActual = right - left + 1;
+                if (longitudActual > maxLongitud) {
+                    maxLongitud = longitudActual;
+                }
+            }
+        }
+
+        return maxLongitud;
+    }
+
+}
+
+public class Solution {
+
+    public static void main(String[] args) throws IOException {
+
+        BufferedReader bufferedReader =
+                new BufferedReader(new InputStreamReader(System.in));
+
+        BufferedWriter bufferedWriter =
+                new BufferedWriter(
+                        new FileWriter(System.getenv("OUTPUT_PATH"))
+                );
+
+        String line = bufferedReader.readLine();
+
+        String[] values = line.trim().split("\\s+");
+
+        int[] array = new int[values.length];
+
+        for (int i = 0; i < values.length; i++) {
+            array[i] = Integer.parseInt(values[i]);
+        }
+
+        int result = Result.longestPeak(array);
+
+        bufferedWriter.write(String.valueOf(result));
+        bufferedWriter.newLine();
+
+        bufferedReader.close();
+        bufferedWriter.close();
+    }
+}
