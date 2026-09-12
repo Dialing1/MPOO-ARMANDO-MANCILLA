@@ -1,0 +1,265 @@
+import java.util.Scanner;
+
+// 3.1. Clase CuentaBancaria
+class CuentaBancaria {
+    // Atributos privados
+    private String numeroCuenta;
+    private String titular;
+    private double saldo;
+    private boolean activa;
+
+    // Constructor
+    public CuentaBancaria(String numeroCuenta, String titular, double saldoInicial, boolean activa) {
+        this.numeroCuenta = numeroCuenta;
+        this.titular = titular;
+        this.saldo = saldoInicial >= 0 ? saldoInicial : 0;
+        this.activa = activa;
+    }
+
+    // Getters
+    public String getNumeroCuenta() {
+        return numeroCuenta;
+    }
+
+    public String getTitular() {
+        return titular;
+    }
+
+    public double getSaldo() {
+        return saldo;
+    }
+
+    public boolean isActiva() {
+        return activa;
+    }
+
+    // Métodos de dominio para modificar el saldo de manera controlada
+    public boolean depositar(double cantidad) {
+        if (cantidad <= 0 || !activa) {
+            return false;
+        }
+        this.saldo += cantidad;
+        return true;
+    }
+
+    public boolean retirar(double cantidad) {
+        if (cantidad <= 0 || !activa || cantidad > this.saldo) {
+            return false;
+        }
+        this.saldo -= cantidad;
+        return true;
+    }
+}
+
+//  Clase CuentaBancariaService
+class CuentaBancariaService {
+    // Arreglo como atributo de la clase (repositorio de cuentas)
+    private CuentaBancaria[] cuentas;
+
+    public CuentaBancariaService() {
+        // Inicialización de cuentas de prueba dentro del repositorio
+        cuentas = new CuentaBancaria[] {
+            new CuentaBancaria("1001", "Ana Gómez", 1500.50, true),
+            new CuentaBancaria("1002", "Carlos López", 500.00, true),
+            new CuentaBancaria("1003", "María Rodríguez", 3000.00, false), // Inactiva
+            new CuentaBancaria("1004", "Juan Pérez", 100.00, true)
+        };
+    }
+
+    // Búsqueda dinámica dentro del arreglo
+    public CuentaBancaria buscarCuenta(String numeroCuenta) {
+        if (numeroCuenta == null || numeroCuenta.trim().isEmpty()) {
+            return null;
+        }
+
+        for (CuentaBancaria cuenta : cuentas) {
+            if (cuenta != null && cuenta.getNumeroCuenta().equalsIgnoreCase(numeroCuenta.trim())) {
+                return cuenta; // Devuelve la referencia encontrada
+            }
+        }
+        return null; // Si no existe, regresa null
+    }
+
+    // Operación Depositar
+    public boolean depositar(String numeroCuenta, double cantidad) {
+        if (cantidad <= 0) {
+            System.out.println("Error: La cantidad a depositar debe ser mayor que cero.");
+            return false;
+        }
+
+        CuentaBancaria cuenta = buscarCuenta(numeroCuenta);
+        if (cuenta == null) {
+            System.out.println("Error: La cuenta especificada no existe.");
+            return false;
+        }
+
+        if (!cuenta.isActiva()) {
+            System.out.println("Error: La cuenta se encuentra inactiva.");
+            return false;
+        }
+
+        cuenta.depositar(cantidad);
+        System.out.printf("Depósito exitoso. Nuevo saldo de %s: $%.2f%n", cuenta.getTitular(), cuenta.getSaldo());
+        return true;
+    }
+
+    // Operación Retirar
+    public boolean retirar(String numeroCuenta, double cantidad) {
+        if (cantidad <= 0) {
+            System.out.println("Error: La cantidad a retirar debe ser mayor que cero.");
+            return false;
+        }
+
+        CuentaBancaria cuenta = buscarCuenta(numeroCuenta);
+        if (cuenta == null) {
+            System.out.println("Error: La cuenta especificada no existe.");
+            return false;
+        }
+
+        if (!cuenta.isActiva()) {
+            System.out.println("Error: La cuenta se encuentra inactiva.");
+            return false;
+        }
+
+        if (cantidad > cuenta.getSaldo()) {
+            System.out.printf("Error: Saldo insuficiente. Saldo disponible: $%.2f%n", cuenta.getSaldo());
+            return false;
+        }
+
+        cuenta.retirar(cantidad);
+        System.out.printf("Retiro exitoso. Nuevo saldo de %s: $%.2f%n", cuenta.getTitular(), cuenta.getSaldo());
+        return true;
+    }
+
+    // Operación Transferir
+    public boolean transferir(String origenNumero, String destinoNumero, double cantidad) {
+        if (cantidad <= 0) {
+            System.out.println("Error: La cantidad a transferir debe ser mayor que cero.");
+            return false;
+        }
+
+        if (origenNumero != null && origenNumero.equalsIgnoreCase(destinoNumero)) {
+            System.out.println("Error: Las cuentas de origen y destino deben ser diferentes.");
+            return false;
+        }
+
+        CuentaBancaria cuentaOrigen = buscarCuenta(origenNumero);
+        CuentaBancaria cuentaDestino = buscarCuenta(destinoNumero);
+
+        if (cuentaOrigen == null) {
+            System.out.println("Error: La cuenta de origen no existe.");
+            return false;
+        }
+
+        if (cuentaDestino == null) {
+            System.out.println("Error: La cuenta de destino no existe.");
+            return false;
+        }
+
+        if (!cuentaOrigen.isActiva() || !cuentaDestino.isActiva()) {
+            System.out.println("Error: Una o ambas cuentas se encuentran inactivas.");
+            return false;
+        }
+
+        if (cantidad > cuentaOrigen.getSaldo()) {
+            System.out.printf("Error: La cuenta de origen no tiene saldo suficiente. Saldo actual: $%.2f%n", cuentaOrigen.getSaldo());
+            return false;
+        }
+
+        // Ejecución de la transferencia
+        cuentaOrigen.retirar(cantidad);
+        cuentaDestino.depositar(cantidad);
+
+        System.out.println("Transferencia realizada con éxito.");
+        System.out.printf("Nuevo saldo origen (%s): $%.2f%n", cuentaOrigen.getTitular(), cuentaOrigen.getSaldo());
+        System.out.printf("Nuevo saldo destino (%s): $%.2f%n", cuentaDestino.getTitular(), cuentaDestino.getSaldo());
+        return true;
+    }
+}
+
+// Menú principal en la consola
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        CuentaBancariaService service = new CuentaBancariaService();
+        int opcion = 0;
+
+        do {
+            System.out.println("\n==================================");
+            System.out.println("    SISTEMA DE OPERACIONES BANCARIAS");
+            System.out.println("==================================");
+            System.out.println("1. Depositar dinero");
+            System.out.println("2. Retirar dinero");
+            System.out.println("3. Transferir dinero");
+            System.out.println("4. Salir");
+            System.out.print("Seleccione una opción: ");
+
+            if (!scanner.hasNextInt()) {
+                System.out.println("Por favor, ingrese un número válido.");
+                scanner.next(); // Limpiar entrada inválida
+                continue;
+            }
+
+            opcion = scanner.nextInt();
+            scanner.nextLine(); // Limpiar buffer de línea
+
+            System.out.println();
+
+            switch (opcion) {
+                case 1:
+                    System.out.print("Ingrese número de cuenta: ");
+                    String numDeposito = scanner.nextLine();
+                    double cantDeposito = leerMonto(scanner, "Ingrese la cantidad a depositar: ");
+                    service.depositar(numDeposito, cantDeposito);
+                    break;
+
+                case 2:
+                    System.out.print("Ingrese número de cuenta: ");
+                    String numRetiro = scanner.nextLine();
+                    double cantRetiro = leerMonto(scanner, "Ingrese la cantidad a retirar: ");
+                    service.retirar(numRetiro, cantRetiro);
+                    break;
+
+                case 3:
+                    System.out.print("Ingrese número de cuenta ORIGEN: ");
+                    String numOrigen = scanner.nextLine();
+                    System.out.print("Ingrese número de cuenta DESTINO: ");
+                    String numDestino = scanner.nextLine();
+                    double cantTransferencia = leerMonto(scanner, "Ingrese la cantidad a transferir: ");
+                    service.transferir(numOrigen, numDestino, cantTransferencia);
+                    break;
+
+                case 4:
+                    System.out.println("Gracias por utilizar el sistema bancario. ¡Hasta luego!");
+                    break;
+
+                default:
+                    System.out.println("Opción no válida. Intente nuevamente.");
+                    break;
+            }
+
+        } while (opcion != 4);
+
+        scanner.close();
+    }
+
+    // Método auxiliar para validar entrada de montos numéricos
+    private static double leerMonto(Scanner scanner, String mensaje) {
+        double monto = -1;
+        while (monto < 0) {
+            System.out.print(mensaje);
+            if (scanner.hasNextDouble()) {
+                monto = scanner.nextDouble();
+                scanner.nextLine(); // Limpiar buffer
+                if (monto <= 0) {
+                    System.out.println("El monto debe ser mayor a cero.");
+                    monto = -1;
+                }
+            } else {
+                System.out.println("Entrada inválida. Ingrese un valor numérico válido.");
+                scanner.next(); // Limpiar entrada incorrecta
+            }
+        }
+        return monto;
+    }
+}
