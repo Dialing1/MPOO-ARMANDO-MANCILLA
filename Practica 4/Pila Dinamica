@@ -1,0 +1,204 @@
+import java.io.*;
+import java.math.*;
+import java.security.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.*;
+
+class Result {
+
+    // Implementacion interna de la Pila utilizando exclusivamente un arreglo tipo double[]
+    static class PilaDinamica {
+
+        private double[] elementos; // Arreglo interno para almacenar los datos de tipo double
+        private int cima;           // Apuntador a la siguiente posicion disponible (equivale tambien al tamano de la pila)
+
+        // Constructor que inicializa el arreglo con la capacidad recibida por parametro
+        public PilaDinamica(int capacidadInicial) {
+            this.elementos = new double[capacidadInicial];
+            this.cima = 0; // Al inicio no hay elementos cargados
+        }
+
+        // Inserta un valor en el tope de la pila. Si se llena el arreglo, amplia al doble la capacidad.
+        public void push(double valor) {
+            // Verificar si el arreglo alcanzo su capacidad maxima
+            if (cima == elementos.length) {
+                ampliarCapacidad();
+            }
+            elementos[cima] = valor; // Guardar el valor en la cima actual
+            cima++;                  // Avanzar el indice de la cima
+        }
+
+        // Remueve y retorna el elemento superior. Retorna Double.NaN si esta vacia.
+        public double pop() {
+            if (isEmpty()) {
+                return Double.NaN;
+            }
+            cima--;                  // Decrementar el indice para retroceder al elemento en la cima
+            return elementos[cima];  // Devolver el valor removido
+        }
+
+        // Consulta el elemento del tope sin modificar ni eliminar nada de la pila.
+        public double peek() {
+            if (isEmpty()) {
+                return Double.NaN;
+            }
+            return elementos[cima - 1]; // Devuelve el ultimo elemento insertado (en la posicion cima - 1)
+        }
+
+        // Verifica si la pila se encuentra completamente vacia.
+        public boolean isEmpty() {
+            return cima == 0;
+        }
+
+        // Devuelve el numero actual de elementos almacenados en la pila.
+        public int size() {
+            return cima;
+        }
+
+        // Devuelve la capacidad total del arreglo en memoria (incluyendo posiciones no ocupadas).
+        public int capacity() {
+            return elementos.length;
+        }
+
+        // Duplica el tamano del arreglo interno conservando los datos existentes
+        private void ampliarCapacidad() {
+            // Crear el nuevo arreglo con el doble de capacidad del anterior
+            double[] nuevoArreglo = new double[elementos.length * 2];
+            
+            // Copiar los elementos del arreglo antiguo al nuevo
+            for (int i = 0; i < cima; i++) {
+                nuevoArreglo[i] = elementos[i];
+            }
+            
+            // Reemplazar la referencia del arreglo por la del nuevo arreglo ampliado
+            elementos = nuevoArreglo;
+        }
+    }
+
+    /*
+     * NO MODIFICAR. Reservado para HackerRank
+     */
+    public static List<String> procesarOperaciones(
+            int capacidad, List<String> operaciones) {
+
+        PilaDinamica pila = new PilaDinamica(capacidad);
+
+        List<String> salida = new ArrayList<>();
+
+        for (String linea : operaciones) {
+
+            String[] partes = linea.trim().split("\\s+");
+
+            String operacion = partes[0];
+
+            switch (operacion) {
+
+                case "PUSH":
+
+                    double valor =
+                            Double.parseDouble(partes[1]);
+
+                    pila.push(valor);
+
+                    salida.add("OK");
+
+                    break;
+
+                case "POP":
+
+                    double eliminado = pila.pop();
+
+                    if (Double.isNaN(eliminado)) {
+                        salida.add("EMPTY");
+                    } else {
+                        salida.add(
+                                String.valueOf(eliminado)
+                        );
+                    }
+
+                    break;
+
+                case "PEEK":
+
+                    double cima = pila.peek();
+
+                    if (Double.isNaN(cima)) {
+                        salida.add("EMPTY");
+                    } else {
+                        salida.add(
+                                String.valueOf(cima)
+                        );
+                    }
+
+                    break;
+
+                case "SIZE":
+
+                    salida.add(
+                            String.valueOf(
+                                    pila.size()
+                            )
+                    );
+
+                    break;
+
+                case "CAPACITY":
+
+                    salida.add(
+                            String.valueOf(
+                                    pila.capacity()
+                            )
+                    );
+
+                    break;
+
+                case "ISEMPTY":
+
+                    salida.add(
+                            String.valueOf(
+                                    pila.isEmpty()
+                            )
+                    );
+
+                    break;
+            }
+        }
+
+        return salida;
+    }
+}
+
+public class Solution {
+    public static void main(String[] args) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
+
+        int capacidad = Integer.parseInt(bufferedReader.readLine().trim());
+
+        int nOperaciones = Integer.parseInt(bufferedReader.readLine().trim());
+
+        List<String> operaciones = new ArrayList<>();
+
+        for (int i = 0; i < nOperaciones; i++) {
+            String operacionesItem = bufferedReader.readLine();
+            operaciones.add(operacionesItem);
+        }
+
+        List<String> result = Result.procesarOperaciones(capacidad, operaciones);
+
+        for (int i = 0; i < result.size(); i++) {
+            bufferedWriter.write(result.get(i));
+
+            if (i != result.size() - 1) {
+                bufferedWriter.write("\n");
+            }
+        }
+
+        bufferedWriter.newLine();
+
+        bufferedReader.close();
+        bufferedWriter.close();
+    }
+}
