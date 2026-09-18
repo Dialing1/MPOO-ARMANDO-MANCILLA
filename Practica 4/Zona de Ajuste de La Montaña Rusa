@@ -1,0 +1,107 @@
+import java.io.*;
+import java.math.*;
+import java.security.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.*;
+
+class Result {
+
+    /*
+     * Complete the 'detectarZonaAjuste' function below.
+     *
+     * The function is expected to return an INTEGER_ARRAY.
+     * The function accepts INTEGER_ARRAY vagones as parameter.
+     */
+
+    public static int[] detectarZonaAjuste(int[] vagones) {
+        int n = vagones.length;
+
+        if (n <= 1) {
+            return new int[]{-1, -1, 0};
+        }
+
+        // 1. Encontrar el primer elemento desordenado desde la izquierda
+        int left = 0;
+        while (left < n - 1 && vagones[left] <= vagones[left + 1]) {
+            left++;
+        }
+
+        // Si todo el arreglo ya esta ordenado
+        if (left == n - 1) {
+            return new int[]{-1, -1, 0};
+        }
+
+        // 2. Encontrar el primer elemento desordenado desde la derecha
+        int right = n - 1;
+        while (right > 0 && vagones[right] >= vagones[right - 1]) {
+            right--;
+        }
+
+        // 3. Encontrar el valor minimo y maximo dentro del tramo [izquierda, derecha]
+        int subMin = vagones[left];
+        int subMax = vagones[left];
+        for (int i = left; i <= right; i++) {
+            if (vagones[i] < subMin) subMin = vagones[i];
+            if (vagones[i] > subMax) subMax = vagones[i];
+        }
+
+        // 4. Extender 'left' hacia la izquierda si hay elementos mayores a subMin
+        while (left > 0 && vagones[left - 1] > subMin) {
+            left--;
+        }
+
+        // 5. Extender 'right' hacia la derecha si hay elementos menores a subMax
+        while (right < n - 1 && vagones[right + 1] < subMax) {
+            right++;
+        }
+
+        int longitud = right - left + 1;
+
+        return new int[]{left, right, longitud};
+    }
+
+}
+
+public class Solution {
+
+    public static void main(String[] args) throws IOException {
+
+        BufferedReader bufferedReader =
+                new BufferedReader(new InputStreamReader(System.in));
+
+        BufferedWriter bufferedWriter =
+                new BufferedWriter(
+                        new FileWriter(System.getenv("OUTPUT_PATH"))
+                );
+
+        String linea = bufferedReader.readLine();
+
+        if (linea != null && !linea.trim().isEmpty()) {
+            String[] datos = linea.trim().split("\\s+");
+
+            int[] vagones = new int[datos.length];
+
+            for (int i = 0; i < datos.length; i++) {
+                vagones[i] = Integer.parseInt(datos[i]);
+            }
+
+            int[] result = Result.detectarZonaAjuste(vagones);
+
+            for (int i = 0; i < result.length; i++) {
+
+                bufferedWriter.write(String.valueOf(result[i]));
+
+                if (i != result.length - 1) {
+                    bufferedWriter.write(" ");
+                }
+            }
+
+            bufferedWriter.newLine();
+        }
+
+        bufferedReader.close();
+        bufferedWriter.close();
+    }
+}
