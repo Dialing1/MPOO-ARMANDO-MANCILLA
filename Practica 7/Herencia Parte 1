@@ -1,0 +1,702 @@
+import java.util.*;
+
+
+/* =====================================================
+   INTERFACES DE CAPACIDADES
+   ===================================================== */
+
+interface Comunicable {
+    String comunicar();
+}
+
+
+interface Rastreable {
+    String obtenerPosicion();
+}
+
+
+interface Operable {
+    boolean estaOperativo();
+}
+
+
+interface Escaneable {
+    String escanear();
+}
+
+
+/* =====================================================
+   DESTINOS ESPACIALES
+   ===================================================== */
+
+abstract class DestinoEspacial {
+
+    private final String codigo;
+    private final String nombre;
+    private final double gravedad;
+
+
+    protected DestinoEspacial(
+            String codigo,
+            String nombre,
+            double gravedad) {
+
+        this.codigo = codigo;
+        this.nombre = nombre;
+        this.gravedad = gravedad;
+    }
+
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public double getGravedad() {
+        return gravedad;
+    }
+}
+
+
+class Planeta extends DestinoEspacial {
+
+    private final boolean tieneAtmosfera;
+
+
+    public Planeta(
+            String codigo,
+            String nombre,
+            double gravedad,
+            boolean tieneAtmosfera) {
+
+        super(codigo, nombre, gravedad);
+        this.tieneAtmosfera = tieneAtmosfera;
+    }
+
+
+    public boolean tieneAtmosfera() {
+        return tieneAtmosfera;
+    }
+}
+
+
+class SateliteNatural extends DestinoEspacial {
+
+    private final String orbitaA;
+
+
+    public SateliteNatural(
+            String codigo,
+            String nombre,
+            double gravedad,
+            String orbitaA) {
+
+        super(codigo, nombre, gravedad);
+        this.orbitaA = orbitaA;
+    }
+
+
+    public String getOrbitaA() {
+        return orbitaA;
+    }
+}
+
+
+/* =====================================================
+   NAVE
+   ===================================================== */
+
+class Nave implements Comunicable, Rastreable, Operable {
+
+    private final String id;
+    private final String nombre;
+    private final String posicion;
+    private final boolean operativa;
+
+
+    public Nave(
+            String id,
+            String nombre,
+            String posicion,
+            boolean operativa) {
+
+        this.id = id;
+        this.nombre = nombre;
+        this.posicion = posicion;
+        this.operativa = operativa;
+    }
+
+
+    public String getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    @Override
+    public String comunicar() {
+        return "Nave " + nombre + " comunicando";
+    }
+
+    @Override
+    public String obtenerPosicion() {
+        return posicion;
+    }
+
+    @Override
+    public boolean estaOperativo() {
+        return operativa;
+    }
+}
+
+
+/* =====================================================
+   RECURSOS
+   ===================================================== */
+
+abstract class Recurso {
+
+    private final String id;
+
+
+    protected Recurso(String id) {
+        this.id = id;
+    }
+
+
+    public String getId() {
+        return id;
+    }
+}
+
+
+class Dron extends Recurso
+        implements Comunicable, Rastreable,
+        Operable, Escaneable {
+
+    private final String modelo;
+    private final String posicion;
+    private final boolean operativo;
+
+
+    public Dron(
+            String id,
+            String modelo,
+            String posicion,
+            boolean operativo) {
+
+        super(id);
+        this.modelo = modelo;
+        this.posicion = posicion;
+        this.operativo = operativo;
+    }
+
+
+    public String getModelo() {
+        return modelo;
+    }
+
+    @Override
+    public String comunicar() {
+        return "Dron " + modelo + " comunicando";
+    }
+
+    @Override
+    public String obtenerPosicion() {
+        return posicion;
+    }
+
+    @Override
+    public boolean estaOperativo() {
+        return operativo;
+    }
+
+    @Override
+    public String escanear() {
+        return "Dron " + modelo + " escaneando";
+    }
+}
+
+
+class SateliteArtificial extends Recurso
+        implements Comunicable, Rastreable,
+        Operable, Escaneable {
+
+    private final String nombre;
+    private final String posicion;
+    private final boolean operativo;
+
+
+    public SateliteArtificial(
+            String id,
+            String nombre,
+            String posicion,
+            boolean operativo) {
+
+        super(id);
+        this.nombre = nombre;
+        this.posicion = posicion;
+        this.operativo = operativo;
+    }
+
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    @Override
+    public String comunicar() {
+        return "Satelite " + nombre + " comunicando";
+    }
+
+    @Override
+    public String obtenerPosicion() {
+        return posicion;
+    }
+
+    @Override
+    public boolean estaOperativo() {
+        return operativo;
+    }
+
+    @Override
+    public String escanear() {
+        return "Satelite " + nombre + " escaneando";
+    }
+}
+
+
+class Carga extends Recurso implements Rastreable {
+
+    private final String descripcion;
+    private final double peso;
+    private final String posicion;
+
+
+    public Carga(
+            String id,
+            String descripcion,
+            double peso,
+            String posicion) {
+
+        super(id);
+        this.descripcion = descripcion;
+        this.peso = peso;
+        this.posicion = posicion;
+    }
+
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public double getPeso() {
+        return peso;
+    }
+
+    @Override
+    public String obtenerPosicion() {
+        return posicion;
+    }
+}
+
+
+class Tripulante extends Recurso
+        implements Comunicable, Rastreable {
+
+    private final String nombre;
+    private final String posicion;
+
+
+    public Tripulante(
+            String id,
+            String nombre,
+            String posicion) {
+
+        super(id);
+        this.nombre = nombre;
+        this.posicion = posicion;
+    }
+
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    @Override
+    public String comunicar() {
+        return "Tripulante " + nombre + " comunicando";
+    }
+
+    @Override
+    public String obtenerPosicion() {
+        return posicion;
+    }
+}
+
+
+/* =====================================================
+   MISIONES (TEMPLATE METHOD)
+   ===================================================== */
+
+abstract class Mision {
+
+    private final String id;
+    private final String nombre;
+    private final Nave nave;
+    private final DestinoEspacial destino;
+
+
+    protected Mision(
+            String id,
+            String nombre,
+            Nave nave,
+            DestinoEspacial destino) {
+
+        this.id = id;
+        this.nombre = nombre;
+        this.nave = nave;
+        this.destino = destino;
+    }
+
+
+    public String getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public Nave getNave() {
+        return nave;
+    }
+
+    public DestinoEspacial getDestino() {
+        return destino;
+    }
+
+
+    /* Metodo plantilla: flujo fijo que no se puede alterar */
+    public final EjecucionMisionDTO ejecutarMision() {
+
+        if (!validarMision()) {
+            return new EjecucionMisionDTO(
+                    EstadoValidacion.FALLIDA,
+                    EstadoPaso.NO_EJECUTADO,
+                    EstadoPaso.NO_EJECUTADO,
+                    ResultadoObjetivo.NO_EJECUTADO,
+                    EstadoPaso.NO_EJECUTADO,
+                    EstadoPaso.NO_EJECUTADO);
+        }
+
+        prepararRecursos();
+        iniciarViaje();
+        ResultadoObjetivo objetivo = ejecutarObjetivo();
+        finalizarOperacion();
+        generarReporte();
+
+        return new EjecucionMisionDTO(
+                EstadoValidacion.OK,
+                EstadoPaso.OK,
+                EstadoPaso.OK,
+                objetivo,
+                EstadoPaso.OK,
+                EstadoPaso.OK);
+    }
+
+
+    /* Pasos con comportamiento comun (reutilizable) */
+
+    protected boolean validarMision() {
+        return nave.estaOperativo();
+    }
+
+    protected void prepararRecursos() {
+    }
+
+    protected void iniciarViaje() {
+    }
+
+    protected void finalizarOperacion() {
+    }
+
+    protected void generarReporte() {
+    }
+
+
+    /* Paso que cambia en cada subtipo */
+
+    protected abstract ResultadoObjetivo ejecutarObjetivo();
+}
+
+
+class MisionExploracion extends Mision {
+
+    private final Escaneable escaneable;
+
+
+    public MisionExploracion(
+            String id,
+            String nombre,
+            Nave nave,
+            DestinoEspacial destino,
+            Escaneable escaneable) {
+
+        super(id, nombre, nave, destino);
+        this.escaneable = escaneable;
+    }
+
+
+    @Override
+    protected boolean validarMision() {
+        return super.validarMision() && escaneable != null;
+    }
+
+    @Override
+    protected ResultadoObjetivo ejecutarObjetivo() {
+        escaneable.escanear();
+        return ResultadoObjetivo.ESCANEO_COMPLETADO;
+    }
+}
+
+
+class MisionRescate extends Mision {
+
+    private final List<Tripulante> tripulantes;
+
+
+    public MisionRescate(
+            String id,
+            String nombre,
+            Nave nave,
+            DestinoEspacial destino,
+            List<Tripulante> tripulantes) {
+
+        super(id, nombre, nave, destino);
+        this.tripulantes = new ArrayList<Tripulante>(tripulantes);
+    }
+
+
+    @Override
+    protected boolean validarMision() {
+        return super.validarMision() && !tripulantes.isEmpty();
+    }
+
+    @Override
+    protected ResultadoObjetivo ejecutarObjetivo() {
+        return ResultadoObjetivo.RESCATE_COMPLETADO;
+    }
+}
+
+
+class MisionTransporte extends Mision {
+
+    private final Carga carga;
+
+
+    public MisionTransporte(
+            String id,
+            String nombre,
+            Nave nave,
+            DestinoEspacial destino,
+            Carga carga) {
+
+        super(id, nombre, nave, destino);
+        this.carga = carga;
+    }
+
+
+    @Override
+    protected boolean validarMision() {
+        return super.validarMision() && carga != null;
+    }
+
+    @Override
+    protected ResultadoObjetivo ejecutarObjetivo() {
+        return ResultadoObjetivo.CARGA_ENTREGADA;
+    }
+}
+
+
+/* =====================================================
+   MAPPERS
+   ===================================================== */
+
+class DestinoMapperImpl implements DestinoMapper {
+
+    @Override
+    public DestinoEspacial toEntity(DestinoDTO dto) {
+
+        if (dto.getTipo() == TipoDestino.PLANETA) {
+            return new Planeta(
+                    dto.getCodigo(),
+                    dto.getNombre(),
+                    dto.getGravedad(),
+                    Boolean.parseBoolean(dto.getDatoEspecifico()));
+        }
+
+        return new SateliteNatural(
+                dto.getCodigo(),
+                dto.getNombre(),
+                dto.getGravedad(),
+                dto.getDatoEspecifico());
+    }
+}
+
+
+class NaveMapperImpl implements NaveMapper {
+
+    @Override
+    public Nave toEntity(NaveDTO dto) {
+        return new Nave(
+                dto.getId(),
+                dto.getNombre(),
+                dto.getPosicion(),
+                dto.isOperativa());
+    }
+}
+
+
+class RecursoMapperImpl implements RecursoMapper {
+
+    @Override
+    public Recurso toEntity(RecursoDTO dto) {
+
+        if (dto instanceof DronDTO) {
+            DronDTO d = (DronDTO) dto;
+            return new Dron(
+                    d.getId(),
+                    d.getModelo(),
+                    d.getPosicion(),
+                    d.isOperativo());
+        }
+
+        if (dto instanceof SateliteArtificialDTO) {
+            SateliteArtificialDTO s = (SateliteArtificialDTO) dto;
+            return new SateliteArtificial(
+                    s.getId(),
+                    s.getNombre(),
+                    s.getPosicion(),
+                    s.isOperativo());
+        }
+
+        if (dto instanceof CargaDTO) {
+            CargaDTO c = (CargaDTO) dto;
+            return new Carga(
+                    c.getId(),
+                    c.getDescripcion(),
+                    c.getPeso(),
+                    c.getPosicion());
+        }
+
+        if (dto instanceof TripulanteDTO) {
+            TripulanteDTO t = (TripulanteDTO) dto;
+            return new Tripulante(
+                    t.getId(),
+                    t.getNombre(),
+                    t.getPosicion());
+        }
+
+        throw new IllegalArgumentException("Recurso no valido");
+    }
+}
+
+
+/* =====================================================
+   FACTORY DE MISIONES
+   ===================================================== */
+
+class MisionFactoryServiceImpl implements MisionFactoryService {
+
+    @Override
+    public Mision crearMision(
+            MisionDTO dto,
+            Nave nave,
+            DestinoEspacial destino,
+            Map<String, Recurso> recursos) {
+
+        switch (dto.getTipo()) {
+
+            case EXPLORACION: {
+                Escaneable escaneable = null;
+                for (String id : dto.getIdsRecursos()) {
+                    Recurso r = recursos.get(id);
+                    if (r instanceof Escaneable) {
+                        escaneable = (Escaneable) r;
+                        break;
+                    }
+                }
+                return new MisionExploracion(
+                        dto.getId(), dto.getNombre(),
+                        nave, destino, escaneable);
+            }
+
+            case RESCATE: {
+                List<Tripulante> tripulantes =
+                        new ArrayList<Tripulante>();
+                for (String id : dto.getIdsRecursos()) {
+                    Recurso r = recursos.get(id);
+                    if (r instanceof Tripulante) {
+                        tripulantes.add((Tripulante) r);
+                    }
+                }
+                return new MisionRescate(
+                        dto.getId(), dto.getNombre(),
+                        nave, destino, tripulantes);
+            }
+
+            case TRANSPORTE: {
+                Carga carga = null;
+                for (String id : dto.getIdsRecursos()) {
+                    Recurso r = recursos.get(id);
+                    if (r instanceof Carga) {
+                        carga = (Carga) r;
+                        break;
+                    }
+                }
+                return new MisionTransporte(
+                        dto.getId(), dto.getNombre(),
+                        nave, destino, carga);
+            }
+
+            default:
+                throw new IllegalArgumentException(
+                        "Tipo de mision no valido");
+        }
+    }
+}
+
+
+/* =====================================================
+   SERVICIO DE CAPACIDADES
+   ===================================================== */
+
+class CapacidadServiceImpl implements CapacidadService {
+
+    @Override
+    public List<Capacidad> obtenerCapacidades(Object entidad) {
+
+        List<Capacidad> capacidades = new ArrayList<Capacidad>();
+
+        if (entidad instanceof Comunicable) {
+            capacidades.add(Capacidad.COMUNICABLE);
+        }
+        if (entidad instanceof Rastreable) {
+            capacidades.add(Capacidad.RASTREABLE);
+        }
+        if (entidad instanceof Operable) {
+            capacidades.add(Capacidad.OPERABLE);
+        }
+        if (entidad instanceof Escaneable) {
+            capacidades.add(Capacidad.ESCANEABLE);
+        }
+
+        return capacidades;
+    }
+}
