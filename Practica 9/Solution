@@ -1,0 +1,358 @@
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+enum CategoriaProducto { BEBIDA, SNACK }
+enum ResultadoRegistro { PRODUCTO_REGISTRADO, CODIGO_DUPLICADO, PRODUCTO_INVALIDO, PRECIO_INVALIDO }
+enum ResultadoReabastecimiento { REABASTECIMIENTO_REALIZADO, PRODUCTO_NO_ENCONTRADO, CANTIDAD_INVALIDA }
+enum ResultadoEntrega { PRODUCTO_PREPARADO, PRODUCTO_NO_ENCONTRADO, SIN_EXISTENCIAS }
+enum EstadoCobro { COBRO_REALIZADO, MONTO_INVALIDO, SIN_FONDOS_SUFICIENTES }
+enum EstadoCompra { VENTA_REALIZADA, PRODUCTO_NO_ENCONTRADO, SIN_EXISTENCIAS, PAGO_INSUFICIENTE, SIN_FONDOS_SUFICIENTES }
+
+class ProductoInventario {
+    private final Producto producto;
+    private final double precio;
+    private final int existencias;
+    public ProductoInventario(Producto producto, double precio, int existencias) {
+        this.producto = producto; this.precio = precio; this.existencias = existencias;
+    }
+    public Producto getProducto() { return producto; }
+    public double getPrecio() { return precio; }
+    public int getExistencias() { return existencias; }
+}
+
+class ResultadoCobro {
+    private final EstadoCobro estado;
+    private final double cambio;
+    public ResultadoCobro(EstadoCobro estado, double cambio) { this.estado = estado; this.cambio = cambio; }
+    public EstadoCobro getEstado() { return estado; }
+    public double getCambio() { return cambio; }
+}
+
+class ResultadoCompra {
+    private final EstadoCompra estado;
+    private final Producto producto;
+    private final double cambio;
+    public ResultadoCompra(EstadoCompra estado, Producto producto, double cambio) {
+        this.estado = estado; this.producto = producto; this.cambio = cambio;
+    }
+    public EstadoCompra getEstado() { return estado; }
+    public Producto getProducto() { return producto; }
+    public double getCambio() { return cambio; }
+}
+
+class RegistroProductoDTO {
+    private final String codigo, nombre;
+    private final LocalDate fechaCaducidad;
+    private final CategoriaProducto categoria;
+    private final double precio;
+    public RegistroProductoDTO(String codigo, String nombre, LocalDate fechaCaducidad,
+                               CategoriaProducto categoria, double precio) {
+        this.codigo = codigo; this.nombre = nombre; this.fechaCaducidad = fechaCaducidad;
+        this.categoria = categoria; this.precio = precio;
+    }
+    public String getCodigo() { return codigo; }
+    public String getNombre() { return nombre; }
+    public LocalDate getFechaCaducidad() { return fechaCaducidad; }
+    public CategoriaProducto getCategoria() { return categoria; }
+    public double getPrecio() { return precio; }
+}
+
+class ReabastecimientoDTO {
+    private final String codigo;
+    private final int cantidad;
+    public ReabastecimientoDTO(String codigo, int cantidad) { this.codigo = codigo; this.cantidad = cantidad; }
+    public String getCodigo() { return codigo; }
+    public int getCantidad() { return cantidad; }
+}
+
+class CompraDTO {
+    private final String codigoProducto;
+    private final double cantidadRecibida;
+    public CompraDTO(String codigoProducto, double cantidadRecibida) {
+        this.codigoProducto = codigoProducto; this.cantidadRecibida = cantidadRecibida;
+    }
+    public String getCodigoProducto() { return codigoProducto; }
+    public double getCantidadRecibida() { return cantidadRecibida; }
+}
+
+interface Inventario {
+    ResultadoRegistro registrarProducto(Producto producto, double precio);
+    Optional<ProductoInventario> buscarProducto(String codigo);
+    ResultadoReabastecimiento reabastecer(String codigo, int cantidad);
+    ResultadoEntrega despachar(String codigo);
+}
+
+interface Monedero {
+    ResultadoCobro cobrar(double precio, double cantidadRecibida);
+    double consultarFondos();
+}
+
+interface MaquinaDespachadora {
+    ResultadoRegistro registrarProducto(RegistroProductoDTO producto);
+    Optional<ProductoInventario> buscarProducto(String codigo);
+    ResultadoReabastecimiento reabastecer(ReabastecimientoDTO solicitud);
+    ResultadoCompra comprar(CompraDTO solicitud);
+    double consultarFondos();
+}
+
+// ===== SOLUCION =====
+
+abstract class Producto {
+    private final String codigo;
+    private final String nombre;
+    private final LocalDate fechaCaducidad;
+    private final CategoriaProducto categoria;
+
+    protected Producto(String codigo, String nombre, LocalDate fechaCaducidad, CategoriaProducto categoria) {
+        this.codigo = codigo; this.nombre = nombre;
+        this.fechaCaducidad = fechaCaducidad; this.categoria = categoria;
+    }
+    public String getCodigo() { return codigo; }
+    public String getNombre() { return nombre; }
+    public LocalDate getFechaCaducidad() { return fechaCaducidad; }
+    public CategoriaProducto getCategoria() { return categoria; }
+
+    // protected: solo las subclases lo reutilizan para armar su descripcion
+    protected String datosBasicos() { return codigo + " - " + nombre; }
+    public abstract String descripcion();
+}
+
+class Bebida extends Producto {
+    public Bebida(String codigo, String nombre, LocalDate fecha) {
+        super(codigo, nombre, fecha, CategoriaProducto.BEBIDA);
+    }
+    @Override public String descripcion() { return "Bebida: " + datosBasicos(); }
+}
+
+class Snack extends Producto {
+    public Snack(String codigo, String nombre, LocalDate fecha) {
+        super(codigo, nombre, fecha, CategoriaProducto.SNACK);
+    }
+    @Override public String descripcion() { return "Snack: " + datosBasicos(); }
+}
+
+class InventarioEnMemoria implements Inventario {
+    private static class Entrada {
+        private final Producto producto;
+        private final double precio;
+        private int existencias;
+        private Entrada(Producto producto, double precio) { this.producto = producto; this.precio = precio; }
+    }
+    private final Map<String, Entrada> productos = new HashMap<>();
+
+    @Override
+    public ResultadoRegistro registrarProducto(Producto p, double precio) {
+        if (p == null || p.getCodigo() == null || p.getCodigo().isBlank()
+                || p.getNombre() == null || p.getNombre().isBlank()
+                || p.getFechaCaducidad() == null || p.getCategoria() == null)
+            return ResultadoRegistro.PRODUCTO_INVALIDO;
+        if (Double.isNaN(precio) || Double.isInfinite(precio) || precio <= 0)
+            return ResultadoRegistro.PRECIO_INVALIDO;
+        if (productos.containsKey(p.getCodigo())) return ResultadoRegistro.CODIGO_DUPLICADO;
+        productos.put(p.getCodigo(), new Entrada(p, precio));
+        return ResultadoRegistro.PRODUCTO_REGISTRADO;
+    }
+
+    @Override
+    public Optional<ProductoInventario> buscarProducto(String codigo) {
+        Entrada e = (codigo == null) ? null : productos.get(codigo);
+        if (e == null) return Optional.empty();
+        return Optional.of(new ProductoInventario(e.producto, e.precio, e.existencias));
+    }
+
+    @Override
+    public ResultadoReabastecimiento reabastecer(String codigo, int cantidad) {
+        Entrada e = (codigo == null) ? null : productos.get(codigo);
+        if (e == null) return ResultadoReabastecimiento.PRODUCTO_NO_ENCONTRADO;
+        if (cantidad <= 0 || (long) e.existencias + cantidad > Integer.MAX_VALUE)
+            return ResultadoReabastecimiento.CANTIDAD_INVALIDA;
+        e.existencias += cantidad;
+        return ResultadoReabastecimiento.REABASTECIMIENTO_REALIZADO;
+    }
+
+    @Override
+    public ResultadoEntrega despachar(String codigo) {
+        Entrada e = (codigo == null) ? null : productos.get(codigo);
+        if (e == null) return ResultadoEntrega.PRODUCTO_NO_ENCONTRADO;
+        if (e.existencias <= 0) return ResultadoEntrega.SIN_EXISTENCIAS;
+        e.existencias--;
+        return ResultadoEntrega.PRODUCTO_PREPARADO;
+    }
+}
+
+class MonederoEfectivo implements Monedero {
+    private double fondos;
+
+    public MonederoEfectivo(double fondosIniciales) {
+        if (Double.isNaN(fondosIniciales) || Double.isInfinite(fondosIniciales) || fondosIniciales < 0)
+            throw new IllegalArgumentException("Los fondos no pueden ser negativos");
+        this.fondos = fondosIniciales;
+    }
+
+    @Override
+    public ResultadoCobro cobrar(double precio, double recibida) {
+        if (Double.isNaN(precio) || Double.isNaN(recibida) || Double.isInfinite(precio)
+                || Double.isInfinite(recibida) || precio <= 0 || recibida + 1e-9 < precio)
+            return new ResultadoCobro(EstadoCobro.MONTO_INVALIDO, 0.0);
+        double cambio = Math.max(0.0, Math.round((recibida - precio) * 100) / 100.0);
+        if (cambio > fondos) return new ResultadoCobro(EstadoCobro.SIN_FONDOS_SUFICIENTES, 0.0);
+        fondos += precio;   // solo el precio es ingreso; el cambio se regresa al usuario
+        return new ResultadoCobro(EstadoCobro.COBRO_REALIZADO, cambio);
+    }
+
+    @Override
+    public double consultarFondos() { return fondos; }
+}
+
+class MaquinaExpendedora implements MaquinaDespachadora {
+    private final Inventario inventario;   // depende de interfaces, no de clases concretas
+    private final Monedero monedero;
+
+    private MaquinaExpendedora(Builder b) { this.inventario = b.inventario; this.monedero = b.monedero; }
+
+    public static Builder builder() { return new Builder(); }
+
+    @Override
+    public ResultadoRegistro registrarProducto(RegistroProductoDTO dto) {
+        if (dto == null || dto.getCategoria() == null) return ResultadoRegistro.PRODUCTO_INVALIDO;
+        Producto p = (dto.getCategoria() == CategoriaProducto.BEBIDA)
+                ? new Bebida(dto.getCodigo(), dto.getNombre(), dto.getFechaCaducidad())
+                : new Snack(dto.getCodigo(), dto.getNombre(), dto.getFechaCaducidad());
+        return inventario.registrarProducto(p, dto.getPrecio());
+    }
+
+    @Override
+    public Optional<ProductoInventario> buscarProducto(String codigo) {
+        return inventario.buscarProducto(codigo);
+    }
+
+    @Override
+    public ResultadoReabastecimiento reabastecer(ReabastecimientoDTO s) {
+        if (s == null) return ResultadoReabastecimiento.PRODUCTO_NO_ENCONTRADO;
+        return inventario.reabastecer(s.getCodigo(), s.getCantidad());
+    }
+
+    @Override
+    public ResultadoCompra comprar(CompraDTO s) {
+        if (s == null) return new ResultadoCompra(EstadoCompra.PRODUCTO_NO_ENCONTRADO, null, 0.0);
+        double recibido = s.getCantidadRecibida();
+        Optional<ProductoInventario> encontrado = inventario.buscarProducto(s.getCodigoProducto());
+        if (encontrado.isEmpty())
+            return new ResultadoCompra(EstadoCompra.PRODUCTO_NO_ENCONTRADO, null, 0.0);
+        ProductoInventario pi = encontrado.get();
+        Producto prod = pi.getProducto();
+
+        if (pi.getExistencias() <= 0)
+            return new ResultadoCompra(EstadoCompra.SIN_EXISTENCIAS, prod, 0.0);
+        if (Double.isNaN(recibido) || Double.isInfinite(recibido) || recibido + 1e-9 < pi.getPrecio())
+            return new ResultadoCompra(EstadoCompra.PAGO_INSUFICIENTE, prod, 0.0);
+
+        // Se verifica el cambio ANTES de retirar la unidad, para no dejar el sistema inconsistente
+        double cambio = Math.max(0.0, Math.round((recibido - pi.getPrecio()) * 100) / 100.0);
+        if (cambio > monedero.consultarFondos())
+            return new ResultadoCompra(EstadoCompra.SIN_FONDOS_SUFICIENTES, prod, 0.0);
+
+        if (inventario.despachar(s.getCodigoProducto()) != ResultadoEntrega.PRODUCTO_PREPARADO)
+            return new ResultadoCompra(EstadoCompra.SIN_EXISTENCIAS, prod, 0.0);
+
+        ResultadoCobro cobro = monedero.cobrar(pi.getPrecio(), recibido);
+        return new ResultadoCompra(EstadoCompra.VENTA_REALIZADA, prod, cobro.getCambio());
+    }
+
+    @Override
+    public double consultarFondos() { return monedero.consultarFondos(); }
+
+    public static class Builder {
+        private Inventario inventario;
+        private Monedero monedero;
+        public Builder inventario(Inventario i) { this.inventario = i; return this; }
+        public Builder monedero(Monedero m) { this.monedero = m; return this; }
+        public MaquinaExpendedora build() {
+            if (inventario == null || monedero == null)
+                throw new IllegalStateException("Se requieren un Inventario y un Monedero");
+            return new MaquinaExpendedora(this);
+        }
+    }
+}
+
+class Result {
+    public static MaquinaDespachadora crearMaquina(double fondosIniciales) {
+        Inventario inventario = new InventarioEnMemoria();
+        Monedero monedero = new MonederoEfectivo(fondosIniciales);
+        return MaquinaExpendedora.builder().inventario(inventario).monedero(monedero).build();
+    }
+}
+
+public class Solution {
+
+    public static void main(String[] args) throws Exception {
+        java.util.Locale.setDefault(java.util.Locale.US);
+        java.io.BufferedReader reader =
+                new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+
+        double fondosIniciales = Double.parseDouble(reader.readLine().trim());
+        MaquinaDespachadora maquina = Result.crearMaquina(fondosIniciales);
+        if (maquina == null) throw new IllegalStateException("Result.crearMaquina() regreso null");
+
+        int numeroOperaciones = Integer.parseInt(reader.readLine().trim());
+        for (int i = 0; i < numeroOperaciones; i++) {
+            String linea = reader.readLine();
+            if (linea == null) break;
+            ejecutarOperacion(maquina, linea);
+        }
+    }
+
+    private static void ejecutarOperacion(MaquinaDespachadora maquina, String linea) {
+        String[] partes = linea.split("\\|", -1);
+        String operacion = partes[0].trim().toUpperCase();
+        switch (operacion) {
+            case "REGISTRAR": registrar(maquina, partes); break;
+            case "BUSCAR": buscar(maquina, partes); break;
+            case "REABASTECER": reabastecer(maquina, partes); break;
+            case "COMPRAR": comprar(maquina, partes); break;
+            case "FONDOS": consultarFondos(maquina); break;
+            default: throw new IllegalArgumentException("Operacion desconocida: " + operacion);
+        }
+    }
+
+    private static void registrar(MaquinaDespachadora maquina, String[] partes) {
+        RegistroProductoDTO producto = new RegistroProductoDTO(
+                partes[1].trim(),
+                partes[2].trim(),
+                LocalDate.parse(partes[3].trim()),
+                CategoriaProducto.valueOf(partes[4].trim().toUpperCase()),
+                Double.parseDouble(partes[5].trim()));
+        System.out.println("REGISTRAR|" + maquina.registrarProducto(producto));
+    }
+
+    private static void buscar(MaquinaDespachadora maquina, String[] partes) {
+        Optional<ProductoInventario> resultado = maquina.buscarProducto(partes[1].trim());
+        if (resultado.isEmpty()) {
+            System.out.println("BUSCAR|NO_ENCONTRADO");
+            return;
+        }
+        ProductoInventario producto = resultado.get();
+        System.out.printf(java.util.Locale.US, "BUSCAR|ENCONTRADO|%.2f|%d%n",
+                producto.getPrecio(), producto.getExistencias());
+    }
+
+    private static void reabastecer(MaquinaDespachadora maquina, String[] partes) {
+        ReabastecimientoDTO solicitud = new ReabastecimientoDTO(
+                partes[1].trim(), Integer.parseInt(partes[2].trim()));
+        System.out.println("REABASTECER|" + maquina.reabastecer(solicitud));
+    }
+
+    private static void comprar(MaquinaDespachadora maquina, String[] partes) {
+        CompraDTO solicitud = new CompraDTO(
+                partes[1].trim(), Double.parseDouble(partes[2].trim()));
+        ResultadoCompra resultado = maquina.comprar(solicitud);
+        System.out.printf(java.util.Locale.US, "COMPRAR|%s|%.2f%n",
+                resultado.getEstado(), resultado.getCambio());
+    }
+
+    private static void consultarFondos(MaquinaDespachadora maquina) {
+        System.out.printf(java.util.Locale.US, "FONDOS|%.2f%n", maquina.consultarFondos());
+    }
+}
