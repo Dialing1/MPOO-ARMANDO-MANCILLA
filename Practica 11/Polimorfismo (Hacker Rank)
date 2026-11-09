@@ -1,0 +1,452 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+
+interface Publicable {
+    ResultadoPublicacion publicar();
+    Long getId();
+    String getAutor();
+}
+
+abstract class PublicacionDTO {
+    private final Long id;
+    private final String autor;
+    private final String titulo;
+    private final int meGusta;
+    private final int comentarios;
+    private final int compartidos;
+
+    protected PublicacionDTO(Long id, String autor, String titulo,
+                             int meGusta, int comentarios, int compartidos) {
+        this.id = id;
+        this.autor = autor;
+        this.titulo = titulo;
+        this.meGusta = meGusta;
+        this.comentarios = comentarios;
+        this.compartidos = compartidos;
+    }
+
+    public Long getId() { return id; }
+    public String getAutor() { return autor; }
+    public String getTitulo() { return titulo; }
+    public int getMeGusta() { return meGusta; }
+    public int getComentarios() { return comentarios; }
+    public int getCompartidos() { return compartidos; }
+}
+
+final class PublicacionTextoDTO extends PublicacionDTO {
+    private final String texto;
+
+    public PublicacionTextoDTO(Long id, String autor, String titulo,
+                               int meGusta, int comentarios, int compartidos, String texto) {
+        super(id, autor, titulo, meGusta, comentarios, compartidos);
+        this.texto = texto;
+    }
+
+    public String getTexto() { return texto; }
+}
+
+final class PublicacionImagenDTO extends PublicacionDTO {
+    private final String descripcionImagen;
+    private final String formato;
+
+    public PublicacionImagenDTO(Long id, String autor, String titulo,
+                                int meGusta, int comentarios, int compartidos,
+                                String descripcionImagen, String formato) {
+        super(id, autor, titulo, meGusta, comentarios, compartidos);
+        this.descripcionImagen = descripcionImagen;
+        this.formato = formato;
+    }
+
+    public String getDescripcionImagen() { return descripcionImagen; }
+    public String getFormato() { return formato; }
+}
+
+final class PublicacionVideoDTO extends PublicacionDTO {
+    private final int duracionSegundos;
+    private final int visualizaciones;
+
+    public PublicacionVideoDTO(Long id, String autor, String titulo,
+                               int meGusta, int comentarios, int compartidos,
+                               int duracionSegundos, int visualizaciones) {
+        super(id, autor, titulo, meGusta, comentarios, compartidos);
+        this.duracionSegundos = duracionSegundos;
+        this.visualizaciones = visualizaciones;
+    }
+
+    public int getDuracionSegundos() { return duracionSegundos; }
+    public int getVisualizaciones() { return visualizaciones; }
+}
+
+enum EstadoPublicacion {
+    RECHAZADA, PUBLICADA, DESTACADA, VIRAL
+}
+
+enum FormatoImagen {
+    JPG, PNG, WEBP
+}
+
+class ResultadoPublicacion {
+    private final Long idPublicacion;
+    private final String autor;
+    private final String descripcion;
+    private final double relevancia;
+    private final EstadoPublicacion estado;
+    private final LocalDateTime fechaProcesamiento;
+
+    public ResultadoPublicacion(Long idPublicacion, String autor, String descripcion,
+                                double relevancia, EstadoPublicacion estado,
+                                LocalDateTime fechaProcesamiento) {
+        this.idPublicacion = idPublicacion;
+        this.autor = autor;
+        this.descripcion = descripcion;
+        this.relevancia = relevancia;
+        this.estado = estado;
+        this.fechaProcesamiento = fechaProcesamiento;
+    }
+
+    public Long getIdPublicacion() { return idPublicacion; }
+    public String getAutor() { return autor; }
+    public String getDescripcion() { return descripcion; }
+    public double getRelevancia() { return relevancia; }
+    public EstadoPublicacion getEstado() { return estado; }
+    public LocalDateTime getFechaProcesamiento() { return fechaProcesamiento; }
+}
+abstract class Publicacion implements Publicable {
+    private final Long id;
+    private final String autor;
+    private final String titulo;
+    private final LocalDateTime fechaCreacion;
+    private final int meGusta;
+    private final int comentarios;
+    private final int compartidos;
+
+    protected Publicacion(Long id, String autor, String titulo, LocalDateTime fechaCreacion,
+                          int meGusta, int comentarios, int compartidos) {
+        this.id = id;
+        this.autor = autor;
+        this.titulo = titulo;
+        this.fechaCreacion = fechaCreacion;
+        this.meGusta = meGusta;
+        this.comentarios = comentarios;
+        this.compartidos = compartidos;
+    }
+
+    @Override public Long getId() { return id; }
+    @Override public String getAutor() { return autor; }
+    public String getTitulo() { return titulo; }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public int getMeGusta() { return meGusta; }
+    public int getComentarios() { return comentarios; }
+    public int getCompartidos() { return compartidos; }
+
+    @Override
+    public final ResultadoPublicacion publicar() {
+        boolean valida = validarDatosGenerales() && validarContenido();
+        double relevancia = valida ? calcularRelevancia() : 0;
+        EstadoPublicacion estado = determinarEstado(valida, relevancia);
+        String descripcion = getDescripcion();
+        return new ResultadoPublicacion(id, autor, descripcion, relevancia,
+                estado, LocalDateTime.now());
+    }
+
+    private boolean validarDatosGenerales() {
+        return id != null
+                && autor != null && !autor.isBlank()
+                && titulo != null && !titulo.isBlank()
+                && fechaCreacion != null
+                && meGusta >= 0 && comentarios >= 0 && compartidos >= 0;
+    }
+
+    private EstadoPublicacion determinarEstado(boolean valida, double relevancia) {
+        if (!valida) return EstadoPublicacion.RECHAZADA;
+        if (relevancia >= 300) return EstadoPublicacion.VIRAL;
+        if (relevancia >= 100) return EstadoPublicacion.DESTACADA;
+        return EstadoPublicacion.PUBLICADA;
+    }
+
+    protected abstract boolean validarContenido();
+    protected abstract double calcularRelevancia();
+    protected abstract String getDescripcion();
+}
+
+class PublicacionTexto extends Publicacion {
+    private final String texto;
+
+    public PublicacionTexto(Long id, String autor, String titulo, LocalDateTime fechaCreacion,
+                            int meGusta, int comentarios, int compartidos, String texto) {
+        super(id, autor, titulo, fechaCreacion, meGusta, comentarios, compartidos);
+        this.texto = texto;
+    }
+
+    public String getTexto() { return texto; }
+
+    @Override
+    protected boolean validarContenido() {
+        return texto != null && texto.length() >= 10 && texto.length() <= 280;
+    }
+
+    @Override
+    protected double calcularRelevancia() {
+        return getMeGusta() + getComentarios() * 3 + getCompartidos() * 5;
+    }
+
+    @Override
+    protected String getDescripcion() {
+        return "Texto | " + getTitulo() + " | " + getAutor();
+    }
+}
+
+class PublicacionImagen extends Publicacion {
+    private final String descripcionImagen;
+    private final FormatoImagen formato;
+
+    public PublicacionImagen(Long id, String autor, String titulo, LocalDateTime fechaCreacion,
+                             int meGusta, int comentarios, int compartidos,
+                             String descripcionImagen, FormatoImagen formato) {
+        super(id, autor, titulo, fechaCreacion, meGusta, comentarios, compartidos);
+        this.descripcionImagen = descripcionImagen;
+        this.formato = formato;
+    }
+
+    public String getDescripcionImagen() { return descripcionImagen; }
+    public FormatoImagen getFormato() { return formato; }
+
+    @Override
+    protected boolean validarContenido() {
+        return descripcionImagen != null && !descripcionImagen.isBlank() && formato != null;
+    }
+
+    @Override
+    protected double calcularRelevancia() {
+        return getMeGusta() * 2 + getComentarios() * 3 + getCompartidos() * 5;
+    }
+
+    @Override
+    protected String getDescripcion() {
+        return "Imagen | " + getTitulo() + " | " + formato + " | " + getAutor();
+    }
+}
+
+class PublicacionVideo extends Publicacion {
+    private final int duracionSegundos;
+    private int visualizaciones;
+
+    public PublicacionVideo(Long id, String autor, String titulo, LocalDateTime fechaCreacion,
+                            int meGusta, int comentarios, int compartidos,
+                            int duracionSegundos, int visualizaciones) {
+        super(id, autor, titulo, fechaCreacion, meGusta, comentarios, compartidos);
+        this.duracionSegundos = duracionSegundos;
+        this.visualizaciones = visualizaciones;
+    }
+
+    public int getDuracionSegundos() { return duracionSegundos; }
+    public int getVisualizaciones() { return visualizaciones; }
+    public void registrarVisualizacion() { visualizaciones++; }
+
+    @Override
+    protected boolean validarContenido() {
+        return duracionSegundos > 0 && duracionSegundos <= 600;
+    }
+
+    @Override
+    protected double calcularRelevancia() {
+        return getMeGusta() * 2 + getComentarios() * 4 + getCompartidos() * 6
+                + visualizaciones / 100.0;
+    }
+
+    @Override
+    protected String getDescripcion() {
+        return "Video | " + getTitulo() + " | " + duracionSegundos + " s | " + getAutor();
+    }
+}
+class Feed {
+    private final List<ResultadoPublicacion> publicaciones = new ArrayList<>();
+
+    public ResultadoPublicacion agregar(Publicable publicacion) {
+        ResultadoPublicacion resultado = publicacion.publicar();
+        publicaciones.add(resultado);
+        return resultado;
+    }
+
+    public List<ResultadoPublicacion> agregar(List<Publicable> lista) {
+        List<ResultadoPublicacion> resultados = new ArrayList<>();
+        for (Publicable p : lista) resultados.add(agregar(p));
+        return resultados;
+    }
+
+    public ResultadoPublicacion procesar(Publicable publicacion) {
+        return agregar(publicacion);
+    }
+
+    public List<ResultadoPublicacion> procesar(List<Publicable> lista) {
+        return agregar(lista);
+    }
+
+    public List<ResultadoPublicacion> obtenerVirales() {
+        return publicaciones.stream()
+                .filter(r -> r.getEstado() == EstadoPublicacion.VIRAL)
+                .collect(Collectors.toList());
+    }
+
+    public List<ResultadoPublicacion> generarRanking() {
+        List<ResultadoPublicacion> ranking = new ArrayList<>(publicaciones);
+        ranking.sort(Comparator.comparingDouble(ResultadoPublicacion::getRelevancia).reversed());
+        return ranking;
+    }
+
+    public List<ResultadoPublicacion> getPublicaciones() {
+        return Collections.unmodifiableList(publicaciones);
+    }
+}
+
+class Result {
+
+    public static Publicable convertir(PublicacionTextoDTO e) {
+        return new PublicacionTexto(e.getId(), e.getAutor(), e.getTitulo(), LocalDateTime.now(),
+                e.getMeGusta(), e.getComentarios(), e.getCompartidos(), e.getTexto());
+    }
+
+    public static Publicable convertir(PublicacionImagenDTO e) {
+        return new PublicacionImagen(e.getId(), e.getAutor(), e.getTitulo(), LocalDateTime.now(),
+                e.getMeGusta(), e.getComentarios(), e.getCompartidos(),
+                e.getDescripcionImagen(), convertirFormato(e.getFormato()));
+    }
+
+    public static Publicable convertir(PublicacionVideoDTO e) {
+        return new PublicacionVideo(e.getId(), e.getAutor(), e.getTitulo(), LocalDateTime.now(),
+                e.getMeGusta(), e.getComentarios(), e.getCompartidos(),
+                e.getDuracionSegundos(), e.getVisualizaciones());
+    }
+
+    private static FormatoImagen convertirFormato(String formato) {
+        if (formato == null) return null;
+        try {
+            return FormatoImagen.valueOf(formato.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+}
+final class HackerRankVibe {
+
+    private HackerRankVibe() { }
+
+    public static void ejecutar() throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        String primeraLinea = reader.readLine();
+        if (primeraLinea == null || primeraLinea.isBlank()) return;
+
+        int numeroPublicaciones = Integer.parseInt(primeraLinea.trim());
+        List<Publicable> publicaciones = new ArrayList<>();
+
+        for (int i = 0; i < numeroPublicaciones; i++) {
+            String linea = reader.readLine();
+            if (linea == null) throw new IllegalArgumentException("Faltan publicaciones");
+            Publicable publicacion = convertirEntrada(linea);
+            if (publicacion == null) throw new IllegalStateException("La conversion regreso null");
+            publicaciones.add(publicacion);
+        }
+
+        Feed feedIndividual = new Feed();
+        for (Publicable publicacion : publicaciones) {
+            ResultadoPublicacion resultado = feedIndividual.procesar(publicacion);
+            imprimirResultado(resultado);
+        }
+
+        Feed feed = new Feed();
+        feed.procesar(publicaciones);
+
+        System.out.println("RANKING");
+        for (ResultadoPublicacion resultado : feed.generarRanking()) imprimirRanking(resultado);
+
+        System.out.println("VIRALES");
+        for (ResultadoPublicacion resultado : feed.obtenerVirales()) imprimirViral(resultado);
+    }
+
+    private static Publicable convertirEntrada(String linea) {
+        if (linea == null || linea.isBlank())
+            throw new IllegalArgumentException("La linea no puede estar vacia");
+
+        String[] partes = linea.split("\\|", -1);
+        String tipo = partes[0].trim().toUpperCase();
+
+        switch (tipo) {
+            case "TEXTO": return convertirTexto(partes);
+            case "IMAGEN": return convertirImagen(partes);
+            case "VIDEO": return convertirVideo(partes);
+            default: throw new IllegalArgumentException("Tipo de publicacion invalido");
+        }
+    }
+
+    private static Publicable convertirTexto(String[] partes) {
+        if (partes.length != 8) throw new IllegalArgumentException("Formato TEXTO invalido");
+        PublicacionTextoDTO entrada = new PublicacionTextoDTO(
+                Long.parseLong(partes[1].trim()),
+                partes[2].trim(),
+                partes[3].trim(),
+                Integer.parseInt(partes[4].trim()),
+                Integer.parseInt(partes[5].trim()),
+                Integer.parseInt(partes[6].trim()),
+                partes[7].trim());
+        return Result.convertir(entrada);
+    }
+
+    private static Publicable convertirImagen(String[] partes) {
+        if (partes.length != 9) throw new IllegalArgumentException("Formato IMAGEN invalido");
+        PublicacionImagenDTO entrada = new PublicacionImagenDTO(
+                Long.parseLong(partes[1].trim()),
+                partes[2].trim(),
+                partes[3].trim(),
+                Integer.parseInt(partes[4].trim()),
+                Integer.parseInt(partes[5].trim()),
+                Integer.parseInt(partes[6].trim()),
+                partes[7].trim(),
+                partes[8].trim().toUpperCase());
+        return Result.convertir(entrada);
+    }
+
+    private static Publicable convertirVideo(String[] partes) {
+        if (partes.length != 9) throw new IllegalArgumentException("Formato VIDEO invalido");
+        PublicacionVideoDTO entrada = new PublicacionVideoDTO(
+                Long.parseLong(partes[1].trim()),
+                partes[2].trim(),
+                partes[3].trim(),
+                Integer.parseInt(partes[4].trim()),
+                Integer.parseInt(partes[5].trim()),
+                Integer.parseInt(partes[6].trim()),
+                Integer.parseInt(partes[7].trim()),
+                Integer.parseInt(partes[8].trim()));
+        return Result.convertir(entrada);
+    }
+
+    private static void imprimirResultado(ResultadoPublicacion resultado) {
+        System.out.printf("%d|%s|%.2f|%s%n", resultado.getIdPublicacion(),
+                resultado.getDescripcion(), resultado.getRelevancia(), resultado.getEstado());
+    }
+
+    private static void imprimirRanking(ResultadoPublicacion resultado) {
+        System.out.printf("%d|%.2f|%s%n", resultado.getIdPublicacion(),
+                resultado.getRelevancia(), resultado.getEstado());
+    }
+
+    private static void imprimirViral(ResultadoPublicacion resultado) {
+        System.out.printf("%d|%s|%.2f%n", resultado.getIdPublicacion(),
+                resultado.getDescripcion(), resultado.getRelevancia());
+    }
+}
+
+public class Solution {
+
+    public static void main(String[] args) throws Exception {
+        Locale.setDefault(Locale.US);
+        HackerRankVibe.ejecutar();
+    }
+}
