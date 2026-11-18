@@ -1,0 +1,32 @@
+﻿PUT /api/descuentos/ALUMNO {"porcentaje":20}
+   -> HTTP 200 {"tipo":"ALUMNO","porcentaje":20,"mensaje":"Descuento configurado"}
+POST /api/compras {"tipo":"ALUMNO","cantidad":3}
+   -> HTTP 200 {"tipo":"ALUMNO","cantidad":3,"precioBase":650.00,"descuentoAplicado":20,"precioUnitarioFinal":520.00,"total":1560.00,"ingresosAcumulados":1560.00}
+POST /api/compras {"tipo":"GENERAL","cantidad":1}
+   -> HTTP 200 {"tipo":"GENERAL","cantidad":1,"precioBase":900.00,"descuentoAplicado":0,"precioUnitarioFinal":900.00,"total":900.00,"ingresosAcumulados":2460.00}
+DELETE /api/descuentos/ALUMNO 
+   -> HTTP 200 {"tipo":"ALUMNO","porcentaje":0,"mensaje":"Descuento desactivado"}
+DELETE /api/descuentos/ALUMNO 
+   -> HTTP 200 {"tipo":"ALUMNO","porcentaje":0,"mensaje":"Descuento desactivado"}
+POST /api/compras {"tipo":"ALUMNO","cantidad":1}
+   -> HTTP 200 {"tipo":"ALUMNO","cantidad":1,"precioBase":650.00,"descuentoAplicado":0,"precioUnitarioFinal":650.00,"total":650.00,"ingresosAcumulados":3110.00}
+PUT /api/descuentos/PROFESOR {"porcentaje":100}
+   -> HTTP 200 {"tipo":"PROFESOR","porcentaje":100,"mensaje":"Descuento configurado"}
+PUT /api/descuentos/PROFESOR {"porcentaje":150}
+   -> HTTP 400 {"codigo":"DESCUENTO_INVALIDO","mensaje":"El porcentaje debe estar entre 0 y 100"}
+PUT /api/descuentos/PROFESOR {"porcentaje":-5}
+   -> HTTP 400 {"codigo":"DESCUENTO_INVALIDO","mensaje":"El porcentaje debe estar entre 0 y 100"}
+POST /api/compras {"tipo":"PASE_ANUAL","cantidad":0}
+   -> HTTP 400 {"codigo":"CANTIDAD_INVALIDA","mensaje":"La cantidad debe ser un entero entre 1 y 10"}
+POST /api/compras {"tipo":"PASE_ANUAL","cantidad":11}
+   -> HTTP 400 {"codigo":"CANTIDAD_INVALIDA","mensaje":"La cantidad debe ser un entero entre 1 y 10"}
+POST /api/compras {"tipo":"VIP","cantidad":1}
+   -> HTTP 400 {"codigo":"TIPO_BOLETO_INVALIDO","mensaje":"Tipo de boleto no valido: VIP"}
+PUT /api/descuentos/VIP {"porcentaje":10}
+   -> HTTP 400 {"codigo":"TIPO_BOLETO_INVALIDO","mensaje":"Tipo de boleto no valido: VIP"}
+POST /api/compras {"tipo":"GENERAL"}
+   -> HTTP 400 {"codigo":"SOLICITUD_INVALIDA","mensaje":"Los campos 'tipo' y 'cantidad' son obligatorios"}
+POST /api/compras {"tipo":"GENERAL","cantidad":
+   -> HTTP 400 {"codigo":"SOLICITUD_INVALIDA","mensaje":"La solicitud es invalida o esta mal formada"}
+POST /api/compras {"tipo":"PASE_ANUAL","cantidad":2}
+   -> HTTP 200 {"tipo":"PASE_ANUAL","cantidad":2,"precioBase":2400.00,"descuentoAplicado":0,"precioUnitarioFinal":2400.00,"total":4800.00,"ingresosAcumulados":7910.00}
